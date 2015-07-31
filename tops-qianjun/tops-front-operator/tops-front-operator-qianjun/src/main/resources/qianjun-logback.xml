@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration>
+
+<configuration>
+
+	<property name="LOG_DIR" value="/opt/logs/qianjun/dev" />
+	
+	<appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<File>${LOG_DIR}/b2g-web.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+			<fileNamePattern>${LOG_DIR}/b2g-web-%i.log</fileNamePattern>
+			<minIndex>1</minIndex>
+			<maxIndex>30</maxIndex>
+		</rollingPolicy>
+		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+			<maxFileSize>100MB</maxFileSize>
+		</triggeringPolicy>
+		<encoder charset="UTF-8">
+			<Pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%4level] [%logger{50}] -> %msg %n%ex</Pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="B2G_THRIFT_CONNECTION_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<File>${LOG_DIR}/b2g-thrift-connection.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+			<fileNamePattern>${LOG_DIR}/b2g-thrift-connection-%i.log</fileNamePattern>
+			<minIndex>1</minIndex>
+			<maxIndex>30</maxIndex>
+		</rollingPolicy>
+		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+			<maxFileSize>100MB</maxFileSize>
+		</triggeringPolicy>
+		<encoder charset="UTF-8">
+			<Pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%4level] [%logger{50}] -> %msg %n%ex</Pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="PERFORMANCE_MONITOR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<File>${LOG_DIR}/b2g-performance_monitor.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+			<fileNamePattern>${LOG_DIR}/b2g-performance_monitor-%i.log</fileNamePattern>
+			<minIndex>1</minIndex>
+			<maxIndex>30</maxIndex>
+		</rollingPolicy>
+		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+			<maxFileSize>100MB</maxFileSize>
+		</triggeringPolicy>
+		<encoder charset="UTF-8">
+			<Pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%4level] [%logger{50}] -> %msg %n%ex</Pattern>
+		</encoder>
+	</appender>
+	
+
+	
+	<appender name="EXECUTE_TIMER_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<File>${LOG_DIR}/execute_timer.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${LOG_DIR}/execute_timer-%d{yyyy-MM-dd}.log</fileNamePattern>
+		</rollingPolicy>
+		<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+			<maxFileSize>100MB</maxFileSize>
+		</triggeringPolicy>
+		<encoder charset="UTF-8">
+			<Pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%4level] [%logger{50}] -> %msg %n%ex</Pattern>
+		</encoder>
+	</appender>
+	
+	<appender name ="EXECUTE_TIMER_FILE_ASYN" class= "ch.qos.logback.classic.AsyncAppender">
+		<discardingThreshold >0</discardingThreshold>
+		<appender-ref ref ="EXECUTE_TIMER_FILE"/>
+	</appender>
+
+	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder charset="UTF-8">
+			<Pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%4level] [%logger{50}] -> %msg %n%ex</Pattern>
+		</encoder>
+	</appender>
+	
+
+	
+	<!-- <logger name="com.travelzen.b2g.internal" level="ERROR" additivity="false">  
+	    <appender-ref ref="B2G_INTERNAL_INTERFACE_LOG_FILE" />
+	</logger>  -->
+	
+	<logger name="PERFORMANCE_MONITOR_FILE_LOGGER" level="DEBUG" additivity="false">  
+	    <appender-ref ref="PERFORMANCE_MONITOR_FILE" />
+	</logger>
+	
+	<logger name="EXECUTETIMER" level="INFO" additivity="false">
+		<appender-ref ref="EXECUTE_TIMER_FILE_ASYN"></appender-ref>
+	</logger>
+	
+	<logger name="com.travelzen.b2g" level="DEBUG" additivity="false">  
+	    <appender-ref ref="file" />  
+	    <appender-ref ref="stdout" />
+	</logger> 
+	
+	<root level="INFO">
+		<appender-ref ref="stdout" />
+		<appender-ref ref="file" />
+	</root>
+</configuration>

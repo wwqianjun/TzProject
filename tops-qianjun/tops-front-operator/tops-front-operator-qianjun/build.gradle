@@ -1,0 +1,124 @@
+apply plugin: 'war'
+
+dependencies{
+	//compile project(':tops-cruise:tops-cruise-common:cruise-common'), 
+		//project(':tops-cruise:tops-cruise-operator:cruise-operator-service'),
+	
+		//部署时用
+		//project(':tops-front:tops-front-common-base'),
+		//project(':tops-finance:tops-finance-client'),
+		//project(':tops-cruise:tops-cruise-common:cruise-common-service')
+	
+
+	//开发时用
+	testCompile libraries.spring_test
+	compile project(':tops-qianjun:tops-front-operator:qianjun-operator-service')
+//	compile project(':b2g:b2g-internal-interface')
+	compile libraries.spring_jdbc
+	compile libraries.json_lib
+	compile libraries.jackson_mapper_asl
+	compile libraries.spring_orm
+	compile libraries.spring_tx
+	compile libraries.spring_webmvc
+	compile libraries.spring_data_redis
+	compile libraries.spring_security_config
+	compile libraries.spring_security_web
+	compile libraries.spring_security_core
+	compile libraries.commons_lang
+	compile libraries.freemarker
+	compile libraries.logback_ext
+	
+	compile libraries.commons_fileupload
+	compile libraries.commons_io
+	
+	providedCompile libraries.servlet_api
+			
+}
+
+def webapp = project.webAppDirName
+def webtmp = webapp + '-tmp'
+def projectRelativePath = "TzProject/"
+
+def lrMap = [
+	'src/main/webapp/resources/css' : '2',
+	'src/main/webapp/resources/images' : '2',
+	'src/main/webapp/resources/javascripts/common' : '2',
+	'src/main/webapp/WEB-INF/opCommon' : '2',
+	'src/main/webapp/WEB-INF/template' : '2',
+	'src/main/webapp/index.jsp' : '1',
+	'src/main/webapp/WEB-INF/kendoTemplate'	: '2',
+	'src/main/webapp/WEB-INF/facade'	:	'2',
+	'src/main/webapp/resources/javascripts/facade'	:	'2'
+]
+													      
+eclipse {
+	project {
+		lrMap.each {
+			linkedResource name: it.key, type: it.value, locationUri: 'PARENT-3-PROJECT_LOC/' + projectRelativePath + it.key
+		}
+	}
+}
+
+war.doFirst {
+	lrMap.each { lr->
+		copy {
+			from "$rootDir/" + projectRelativePath + lr.key
+			if (lr.value == '2') {
+				into "$projectDir/" + lr.key
+			} else if (lr.value == '1') {
+				into "$projectDir/" + lr.key[0 .. lr.key.lastIndexOf('/')]
+			}
+		}
+	}
+	copy {
+        from "$projectDir/" + webapp
+        into "$projectDir/" + webtmp
+    }
+    if (project.hasProperty('profile')) {
+        copy {
+            from "$projectDir/" + webapp + '-' + project.profile
+            into "$projectDir/" + webtmp
+        }
+    }
+    project.webAppDirName = webtmp
+	
+}
+war.doLast {
+	lrMap.each {
+		if (it.value == '2') {
+			ant.delete dir: "$projectDir/" + it.key
+		} else if (it.value == '1') {
+			ant.delete file: "$projectDir/" + it.key
+		}
+	}
+	ant.delete dir: "$projectDir/"+webtmp
+}
+task deployEnv(dependsOn:[clean, war]) << {
+	
+	def targetServers = ['127.0.0.1']
+	def projectPath = "$projectDir"
+	def jarArchiverPath = projectPath + '/target/libs/tops-front-operator-qj.war'
+	def targetshell = projectPath+'/deploy.py'
+	for (targetServer in targetServers) {
+		
+		exec {
+			executable = 'python'
+			args = [targetshell,'-s',targetServer,'-u','qianjun','-p','Abc12345']
+		}
+	}
+}
+
+task deployOp3(dependsOn:[clean, war]) << {
+	
+	def targetServers = ['192.168.161.148']
+	def projectPath = "$projectDir"
+	def jarArchiverPath = projectPath + '/target/libs/tops-front-operator-cruise.war'
+	def targetshell = projectPath+'/deploy.py'
+	for (targetServer in targetServers) {
+		
+		exec {
+			executable = 'python'
+			args = [targetshell,'-s',targetServer,'-u','root','-p','Abc12345']
+		}
+	}
+}

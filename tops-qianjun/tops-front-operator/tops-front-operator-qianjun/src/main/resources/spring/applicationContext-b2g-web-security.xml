@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security" 
+			 xmlns:beans="http://www.springframework.org/schema/beans" 
+			 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+			 xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+           http://www.springframework.org/schema/security
+           http://www.springframework.org/schema/security/spring-security-3.2.xsd">
+	
+	<!-- 启动自动装配 -->
+	<beans:bean class="org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor"/>
+	
+	<http pattern="/resources/javascripts/**" security="none" />
+    <http pattern="/resources/**/**" security="none" />
+	
+	<http use-expressions="true" entry-point-ref="authenticationProcessingFilterEntryPoint" access-denied-page="/accessDenied">  
+		<!-- 
+			配置Spring去监测如果 SessionID 失效，跳转到登陆页面 
+		 -->
+        <session-management invalid-session-url="/index.jsp">  
+            <concurrency-control max-sessions="30" error-if-maximum-exceeded="true" />  
+        </session-management>
+		<!-- session 共享 -->
+        <custom-filter ref="redisSessionFilter" position="FIRST"/>
+        <!-- 验证码值 -->
+        <custom-filter ref="captchaGeneratingFilter" after="CONCURRENT_SESSION_FILTER"/>
+		<!-- 使用自定义的账户密码验证过滤器 -->
+	    <custom-filter ref="b2gUserNameAndPasswordFilter" position="FORM_LOGIN_FILTER"  />
+		<!-- 添加自定义权限验证 -->
+		<custom-filter ref="b2gFilter" before="FILTER_SECURITY_INTERCEPTOR" />
+		<!-- 
+			delete-cookies ：当用户登出后，需要删除的客户端浏览器中cookies的Key，可以配置多个(点分字符串)
+			invalidate-session ：当用户登出后，使 Tomcat 容器中session失效。
+		 -->
+		<logout delete-cookies="JSESSIONID" invalidate-session="true" logout-success-url="/index.jsp" logout-url="/j_spring_security_logout" />
+		
+	</http> 
+	
+	<beans:bean id="captchaGeneratingFilter" class="com.travelzen.b2g.service.security.CaptchaGeneratingFilter"></beans:bean>
+	
+	<beans:bean id="redisSessionFilter" class="com.travelzen.b2g.service.security.RedisSessionFilter"></beans:bean>
+	
+	<!-- 未登录的切入点 -->  
+    <beans:bean id="authenticationProcessingFilterEntryPoint" class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">  
+        <beans:property name="loginFormUrl" value="/index.jsp"></beans:property>  
+    </beans:bean>  
+
+	<!-- 自定义账户密码过滤器 -->
+	<beans:bean id="b2gUserNameAndPasswordFilter" class="com.travelzen.b2g.service.security.UserNameAndPasswordFilter">
+		<beans:property name="postOnly" value="true"></beans:property>
+	 	<!-- 处理登录的action -->  
+        <beans:property name="filterProcessesUrl" value="/userLogin"></beans:property>  
+        <!-- 验证成功后的处理-->  
+        <beans:property name="authenticationSuccessHandler" ref="loginLogAuthenticationSuccessHandler"></beans:property>  
+        <!-- 验证失败后的处理-->  
+        <beans:property name="authenticationFailureHandler" ref="simpleUrlAuthenticationFailureHandler"></beans:property>  
+		<!-- 认证管理器 -->
+        <beans:property name="authenticationManager" ref="b2gAuthenticationManager"></beans:property>  
+  	</beans:bean>
+  	
+	<!-- 验证成功使用spring提供的bean -->
+  	<beans:bean id="loginLogAuthenticationSuccessHandler"  class="com.travelzen.b2g.service.security.MyAuthenticationSucessHandler">  
+        <beans:property name="defaultTargetUrl" value="/menu_route"></beans:property>  
+    </beans:bean>  
+
+	<!-- 换一种验证失败的处理方式 -->
+    <beans:bean id="simpleUrlAuthenticationFailureHandler"  
+        class="org.springframework.security.web.authentication.ExceptionMappingAuthenticationFailureHandler">
+        
+        <beans:property name="exceptionMappings">
+        	<beans:map>
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyB2bCheckFailedException" value="/login?msg=b2bCheckFailed" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyCaptchaCheckFailedException" value="/login?msg=captchaFailed" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyPasswordNotRightException" value="/login?msg=passwordFailed" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyUserInfoNotRightException" value="/login?msg=userInfoFailed" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyUserNameAndPasswordIsNullException" value="/login?msg=nameAndPasswordNotNull" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyUserNameNotRightException" value="/login?msg=userNameNotRight" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyUserFreezeException" value="/login?msg=userFreeze" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyUserDeleteException" value="/login?msg=userDelete" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyUserStatusNotFoundException" value="/login?msg=userStatusNotFound" />
+        		<beans:entry key="com.travelzen.b2g.service.security.exception.MyCustomerStatusNotRightException" value="/login?msg=customerStatusNotRight" />
+        	</beans:map>
+        </beans:property>
+          
+    </beans:bean>  
+    
+    <!-- 
+    	b2g权限filter，必须包含如下三个组件
+    		authenticationManager
+    		accessDecisionManager
+    		securityMetadataSource
+    -->
+    <beans:bean id="b2gFilter" class="com.travelzen.b2g.service.security.FilterSecurityInterceptor">
+		<!-- 认证管理器 -->
+        <beans:property name="authenticationManager" ref="b2gAuthenticationManager" />
+        <!-- 访问决策器，决定某个用户具有的角色，是否有足够的权限去访问某个资源 -->
+        <beans:property name="accessDecisionManager" ref="b2gAccessDecisionManager" />
+		<!-- 数据资源 -->
+        <beans:property name="securityMetadataSource" ref="b2gSecurityMetadataSource" />
+    </beans:bean>
+    
+    <!-- 资源源数据定义，将所有的资源和权限对应关系建立起来，即定义某一资源可以被哪些角色访问     -->
+    <beans:bean id="b2gSecurityMetadataSource" init-method="loadResourceDefine" class="com.travelzen.b2g.service.security.InvocationSecurityMetadataSourceService"/>
+    
+    <authentication-manager alias="b2gAuthenticationManager">
+        <authentication-provider ref="b2gAuthenticationProvider">
+        </authentication-provider>	
+    </authentication-manager>
+    
+    <!--     认证管理器 -->
+	<beans:bean id="b2gAuthenticationProvider" class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">
+		<beans:property name="userDetailsService" ref="b2gUserDetailService"></beans:property>
+<!-- 		修改异常策略，不隐藏错误信息 -->
+		<beans:property name="hideUserNotFoundExceptions" value="false"></beans:property>
+	</beans:bean>
+</beans:beans>
